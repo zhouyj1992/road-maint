@@ -3,198 +3,178 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>工单详情</title>
+  <title>道路养护工单</title>
   <style>
-    * { margin: 0; padding: 0; box-sizing: border-box; }
-    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif; background: #f5f5f5; min-height: 100vh; }
-    .container { max-width: 750px; margin: 0 auto; background: #fff; min-height: 100vh; }
-    .header { background: linear-gradient(135deg, #1677FF 0%, #2E6BE6 100%); padding: 40px 20px 30px; color: #fff; }
-    .order-no { font-size: 14px; opacity: 0.9; margin-bottom: 8px; }
-    .title { font-size: 22px; font-weight: 600; line-height: 1.4; }
-    .status-tag { display: inline-block; padding: 4px 12px; border-radius: 4px; font-size: 12px; margin-top: 12px; }
-    .status-pending { background: #FFF7E6; color: #FA8C16; }
-    .status-processing { background: #E6F7FF; color: #1677FF; }
-    .status-accepting { background: #F9F0FF; color: #722ED1; }
-    .status-done { background: #F6FFED; color: #52C41A; }
-    .content { padding: 20px; }
-    .section { margin-bottom: 24px; }
-    .section-title { font-size: 14px; color: #999; margin-bottom: 12px; font-weight: 500; }
-    .info-row { display: flex; padding: 12px 0; border-bottom: 1px solid #f0f0f0; }
-    .info-row:last-child { border-bottom: none; }
-    .info-label { width: 80px; color: #666; font-size: 14px; flex-shrink: 0; }
-    .info-value { flex: 1; color: #333; font-size: 14px; word-break: break-all; }
-    .urgent { color: #F5222D; font-weight: 500; }
-    .photos { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
-    .photo-item { aspect-ratio: 1; border-radius: 8px; overflow: hidden; background: #f5f5f5; }
-    .photo-item img { width: 100%; height: 100%; object-fit: cover; }
-    .desc-box { background: #f8f9fa; padding: 16px; border-radius: 8px; color: #333; font-size: 14px; line-height: 1.6; }
-    .footer { padding: 20px; text-align: center; color: #999; font-size: 12px; }
-    .empty { text-align: center; padding: 60px 20px; color: #999; }
-    .empty-icon { font-size: 48px; margin-bottom: 16px; }
+    *{margin:0;padding:0;box-sizing:border-box}
+    body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','PingFang SC','Microsoft YaHei',sans-serif;background:#f5f7fa;padding:16px;min-height:100vh}
+    .card{background:#fff;border-radius:12px;padding:16px;margin-bottom:12px}
+    .title-row{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;padding-bottom:12px;border-bottom:1px solid #f0f0f0}
+    .title{font-size:17px;font-weight:600;color:#1a1a1a;flex:1}
+    .status{padding:3px 10px;border-radius:10px;font-size:11px;color:#fff;flex-shrink:0;margin-left:10px}
+    .status-pending{background:#FA8C16}
+    .status-processing{background:#1677FF}
+    .status-accepting{background:#722ED1}
+    .status-done{background:#52C41A}
+    .info-row{display:flex;margin-bottom:10px;font-size:14px}
+    .info-label{color:#999;width:60px;flex-shrink:0}
+    .info-value{color:#333;flex:1;word-break:break-all}
+    .desc{color:#555;font-size:14px;line-height:1.6;margin-top:4px}
+    .section-title{font-size:14px;font-weight:500;color:#333;margin-bottom:10px;display:flex;align-items:center}
+    .section-title::before{content:'';display:inline-block;width:3px;height:14px;background:#1677FF;border-radius:2px;margin-right:8px}
+    .photos{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+    .photo{width:100%;aspect-ratio:1;object-fit:cover;border-radius:8px;background:#eee}
+    .no-photo{grid-column:1/-1;text-align:center;color:#999;padding:30px;font-size:13px}
+    .nav-btn{display:flex;align-items:center;justify-content:center;width:100%;padding:13px;background:#1677FF;color:#fff;text-decoration:none;border-radius:8px;font-size:15px;font-weight:500;margin:12px 0}
+    .nav-btn.disabled{background:#ccc;pointer-events:none}
+    .error{text-align:center;color:#999;padding:60px 20px;font-size:14px}
+    .error-icon{font-size:48px;margin-bottom:12px}
+    .footer{text-align:center;color:#bbb;font-size:12px;margin:20px 0}
+    .timeline{margin-top:8px}
+    .tl-item{display:flex;margin-bottom:10px;font-size:13px;position:relative}
+    .tl-dot{width:8px;height:8px;border-radius:50%;background:#1677FF;margin-top:4px;margin-right:10px;flex-shrink:0}
+    .tl-text{color:#666;flex:1}
+    .tl-time{color:#aaa;font-size:11px}
+    .urgent{color:#F5222D;font-weight:600}
   </style>
-</head>
-<body>
-  <div class="container" id="app">
-    <div class="empty">
-      <div class="empty-icon">📋</div>
-      <div>正在加载工单信息...</div>
-    </div>
-  </div>
-
   <script>
-    // 从 URL hash 获取 base64 编码的数据
-    function getOrderData() {
-      const hash = window.location.hash.slice(1);
-      if (!hash) return null;
+    // 从 URL hash 读取数据 (base64 → JSON)
+    function getData() {
+      var raw = location.hash.replace(/^#\/?/, '');
+      if (!raw) return null;
+      // 处理 URL 编码的 base64 (如 %2F 等)
       try {
-        const json = atob(decodeURIComponent(hash));
+        raw = decodeURIComponent(raw);
+      } catch(e) {}
+      // 移除可能的前导斜杠
+      raw = raw.replace(/^\//, '');
+      try {
+        var json = decodeURIComponent(escape(atob(raw)));
         return JSON.parse(json);
-      } catch (e) {
-        console.error('解析数据失败:', e);
+      } catch(e) {
+        console.error('Parse error:', e);
         return null;
       }
     }
 
-    // 状态映射
-    const statusMap = {
-      'pending': { text: '待指派', class: 'status-pending' },
-      'processing': { text: '处理中', class: 'status-processing' },
-      'accepting': { text: '待验收', class: 'status-accepting' },
-      'done': { text: '已完成', class: 'status-done' }
-    };
+    function formatTime(ts) {
+      if (!ts) return '';
+      var d = new Date(ts);
+      var m = d.getMonth() + 1;
+      var day = d.getDate();
+      var h = d.getHours();
+      var min = d.getMinutes();
+      return m + '/' + day + ' ' + (h<10?'0':'')+h + ':' + (min<10?'0':'')+min;
+    }
 
-    // 渲染页面
+    function statusClass(s) {
+      if (s === 'done' || s === '已完成') return 'status-done';
+      if (s === 'processing' || s === '处理中') return 'status-processing';
+      if (s === 'accepting' || s === '待验收') return 'status-accepting';
+      return 'status-pending';
+    }
+    function statusLabel(s) {
+      if (s === 'done' || s === '已完成') return '已完成';
+      if (s === 'processing' || s === '处理中') return '处理中';
+      if (s === 'accepting' || s === '待验收') return '待验收';
+      if (s === 'pending' || s === '待指派') return '待指派';
+      return s || '待指派';
+    }
+
     function render() {
-      const data = getOrderData();
-      const app = document.getElementById('app');
-      
-      if (!data) {
-        app.innerHTML = `
-          <div class="empty">
-            <div class="empty-icon">❌</div>
-            <div>无效的链接或数据已过期</div>
-            <div style="margin-top: 12px; font-size: 12px;">请从微信小程序重新分享</div>
-          </div>
-        `;
+      var d = getData();
+      var el = document.getElementById('content');
+      if (!d) {
+        el.innerHTML = '<div class="error"><div class="error-icon">😞</div>无法加载工单信息</div>';
         return;
       }
 
-      const status = statusMap[data.status] || { text: data.status, class: 'status-pending' };
-      const photos = data.photos || [];
-      const beforePhotos = data.beforePhotos || [];
-      const afterPhotos = data.afterPhotos || [];
+      var photosHtml = '';
+      if (d.photos && d.photos.length > 0) {
+        photosHtml = d.photos.map(function(u){
+          return '<img src="'+u+'" class="photo" onerror="this.style.display=\'none\'" loading="lazy">';
+        }).join('');
+      } else {
+        photosHtml = '<div class="no-photo">暂无现场照片</div>';
+      }
 
-      app.innerHTML = `
-        <div class="header">
-          <div class="order-no">工单编号：${data.orderNo || '-'}</div>
-          <div class="title">${data.categoryName || ''} · ${data.problemType || '未知问题'}</div>
-          <span class="status-tag ${status.class}">${status.text}</span>
-        </div>
-        
-        <div class="content">
-          <div class="section">
-            <div class="section-title">基本信息</div>
-            <div class="info-row">
-              <div class="info-label">道路名称</div>
-              <div class="info-value">${data.roadName || '-'}</div>
-            </div>
-            <div class="info-row">
-              <div class="info-label">紧急程度</div>
-              <div class="info-value ${data.isUrgent ? 'urgent' : ''}">${data.urgentLevel || (data.isUrgent ? '紧急' : '一般')}</div>
-            </div>
-            <div class="info-row">
-              <div class="info-label">上报时间</div>
-              <div class="info-value">${data.createTime || '-'}</div>
-            </div>
-            <div class="info-row">
-              <div class="info-label">上报人</div>
-              <div class="info-value">${data.reporterName || data.reporterPhone || '-'}</div>
-            </div>
-          </div>
+      var navHtml = '';
+      if (d.lat && d.lng) {
+        navHtml = '<a href="https://apis.map.qq.com/uri/v1/marker?marker=coord:'+d.lat+','+d.lng+';title='+encodeURIComponent(d.roadName||'')+'&referer=roadmaint" class="nav-btn">🧭 导航到该位置</a>';
+      } else {
+        navHtml = '<div class="nav-btn disabled">暂无位置信息</div>';
+      }
 
-          ${data.assigneeName ? `
-          <div class="section">
-            <div class="section-title">处理人员</div>
-            <div class="info-row">
-              <div class="info-label">指派人</div>
-              <div class="info-value">${data.assigneeName}</div>
-            </div>
-            ${data.assignTime ? `
-            <div class="info-row">
-              <div class="info-label">指派时间</div>
-              <div class="info-value">${data.assignTime}</div>
-            </div>
-            ` : ''}
-          </div>
-          ` : ''}
+      var processedHtml = '';
+      if (d.processRecord && d.processRecord.length > 0) {
+        processedHtml = d.processRecord.map(function(r){
+          var time = r.time ? '<span class="tl-time">'+formatTime(r.time)+'</span>' : '';
+          return '<div class="tl-item"><div class="tl-dot"></div><div class="tl-text">'+(r.text||'')+' '+time+'</div></div>';
+        }).join('');
+      }
 
-          ${photos.length > 0 ? `
-          <div class="section">
-            <div class="section-title">现场照片 (${photos.length}张)</div>
-            <div class="photos">
-              ${photos.map(url => `<div class="photo-item"><img src="${url}" alt="现场照片" onerror="this.style.display='none'"></div>`).join('')}
-            </div>
-          </div>
-          ` : ''}
+      var html = '';
 
-          ${beforePhotos.length > 0 ? `
-          <div class="section">
-            <div class="section-title">施工前照片 (${beforePhotos.length}张)</div>
-            <div class="photos">
-              ${beforePhotos.map(url => `<div class="photo-item"><img src="${url}" alt="施工前" onerror="this.style.display='none'"></div>`).join('')}
-            </div>
-          </div>
-          ` : ''}
+      // 标题卡片
+      html += '<div class="card">';
+      html += '<div class="title-row">';
+      html += '<div class="title">'+(d.categoryName?d.categoryName+' · ':'')+(d.problemType||'工单')+'</div>';
+      html += '<div class="status '+statusClass(d.status)+'">'+statusLabel(d.status)+'</div>';
+      html += '</div>';
+      html += '<div class="info-row"><div class="info-label">路段</div><div class="info-value">'+(d.roadName||'未知')+'</div></div>';
+      if (d.description) {
+        html += '<div class="desc">'+(d.description)+'</div>';
+      }
+      html += '</div>';
 
-          ${afterPhotos.length > 0 ? `
-          <div class="section">
-            <div class="section-title">施工后照片 (${afterPhotos.length}张)</div>
-            <div class="photos">
-              ${afterPhotos.map(url => `<div class="photo-item"><img src="${url}" alt="施工后" onerror="this.style.display='none'"></div>`).join('')}
-            </div>
-          </div>
-          ` : ''}
+      // 等级 / 负责人
+      html += '<div class="card">';
+      html += '<div class="info-row"><div class="info-label">等级</div><div class="info-value '+(d.urgentLevel==='紧急'?'urgent':'')+'">'+(d.urgentLevel||'一般')+'</div></div>';
+      if (d.assigneeName) {
+        html += '<div class="info-row"><div class="info-label">负责人</div><div class="info-value">'+(d.assigneeName)+'</div></div>';
+      }
+      if (d.assigneePhone) {
+        html += '<div class="info-row"><div class="info-label">电话</div><div class="info-value"><a href="tel:'+(d.assigneePhone)+'" style="color:#1677FF;text-decoration:none">'+(d.assigneePhone)+'</a></div></div>';
+      }
+      html += '</div>';
 
-          ${data.description ? `
-          <div class="section">
-            <div class="section-title">问题描述</div>
-            <div class="desc-box">${data.description}</div>
-          </div>
-          ` : ''}
+      // 照片
+      html += '<div class="card">';
+      html += '<div class="section-title">现场照片</div>';
+      html += '<div class="photos">'+photosHtml+'</div>';
+      html += '</div>';
 
-          ${data.location ? `
-          <div class="section">
-            <div class="section-title">位置信息</div>
-            <div class="desc-box">${data.location}</div>
-          </div>
-          ` : ''}
+      // 导航
+      if (d.lat && d.lng) {
+        html += '<div class="card">';
+        html += '<div class="section-title">位置导航</div>';
+        html += '<div class="info-row"><div class="info-label">地址</div><div class="info-value">'+(d.roadName||'')+'</div></div>';
+        html += navHtml;
+        html += '</div>';
+      } else if (!d.lat && !d.lng) {
+        html += '<div class="card">';
+        html += '<div class="section-title">位置导航</div>';
+        html += navHtml;
+        html += '</div>';
+      }
 
-          ${data.finishDate ? `
-          <div class="section">
-            <div class="section-title">完成信息</div>
-            <div class="info-row">
-              <div class="info-label">完成日期</div>
-              <div class="info-value">${data.finishDate}</div>
-            </div>
-            ${data.actualHours ? `
-            <div class="info-row">
-              <div class="info-label">实际工时</div>
-              <div class="info-value">${data.actualHours} 小时</div>
-            </div>
-            ` : ''}
-          </div>
-          ` : ''}
-        </div>
+      // 处理记录
+      if (processedHtml) {
+        html += '<div class="card">';
+        html += '<div class="section-title">处理记录</div>';
+        html += '<div class="timeline">'+processedHtml+'</div>';
+        html += '</div>';
+      }
 
-        <div class="footer">
-          <div>智慧道路养护系统</div>
-          <div style="margin-top: 4px;">此链接仅用于查看工单信息</div>
-        </div>
-      `;
+      html += '<div class="footer">道路养护管理系统 · '+(d.createTime?formatTime(d.createTime):'')+'</div>';
+
+      el.innerHTML = html;
     }
 
-    // 页面加载完成后渲染
-    document.addEventListener('DOMContentLoaded', render);
+    window.onload = render;
+    window.onhashchange = render;
   </script>
+</head>
+<body>
+  <div id="content"></div>
 </body>
 </html>
