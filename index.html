@@ -1,180 +1,102 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>道路养护工单</title>
-  <style>
-    *{margin:0;padding:0;box-sizing:border-box}
-    body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','PingFang SC','Microsoft YaHei',sans-serif;background:#f5f7fa;padding:16px;min-height:100vh}
-    .card{background:#fff;border-radius:12px;padding:16px;margin-bottom:12px}
-    .title-row{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;padding-bottom:12px;border-bottom:1px solid #f0f0f0}
-    .title{font-size:17px;font-weight:600;color:#1a1a1a;flex:1}
-    .status{padding:3px 10px;border-radius:10px;font-size:11px;color:#fff;flex-shrink:0;margin-left:10px}
-    .status-pending{background:#FA8C16}
-    .status-processing{background:#1677FF}
-    .status-accepting{background:#722ED1}
-    .status-done{background:#52C41A}
-    .info-row{display:flex;margin-bottom:10px;font-size:14px}
-    .info-label{color:#999;width:60px;flex-shrink:0}
-    .info-value{color:#333;flex:1;word-break:break-all}
-    .desc{color:#555;font-size:14px;line-height:1.6;margin-top:4px}
-    .section-title{font-size:14px;font-weight:500;color:#333;margin-bottom:10px;display:flex;align-items:center}
-    .section-title::before{content:'';display:inline-block;width:3px;height:14px;background:#1677FF;border-radius:2px;margin-right:8px}
-    .photos{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
-    .photo{width:100%;aspect-ratio:1;object-fit:cover;border-radius:8px;background:#eee}
-    .no-photo{grid-column:1/-1;text-align:center;color:#999;padding:30px;font-size:13px}
-    .nav-btn{display:flex;align-items:center;justify-content:center;width:100%;padding:13px;background:#1677FF;color:#fff;text-decoration:none;border-radius:8px;font-size:15px;font-weight:500;margin:12px 0}
-    .nav-btn.disabled{background:#ccc;pointer-events:none}
-    .error{text-align:center;color:#999;padding:60px 20px;font-size:14px}
-    .error-icon{font-size:48px;margin-bottom:12px}
-    .footer{text-align:center;color:#bbb;font-size:12px;margin:20px 0}
-    .timeline{margin-top:8px}
-    .tl-item{display:flex;margin-bottom:10px;font-size:13px;position:relative}
-    .tl-dot{width:8px;height:8px;border-radius:50%;background:#1677FF;margin-top:4px;margin-right:10px;flex-shrink:0}
-    .tl-text{color:#666;flex:1}
-    .tl-time{color:#aaa;font-size:11px}
-    .urgent{color:#F5222D;font-weight:600}
-  </style>
-  <script src="https://cdn.jsdelivr.net/npm/lz-string@1.5.0/libs/lz-string.min.js"></script>
-  <script>
-    // Parse data from URL hash
-    // Supports: LZ-string compressed (new) and base64 (old)
-    function getData() {
-      var raw = location.hash.replace(/^#\/?/, '');
-      if (!raw) return null;
-      try {
-        raw = decodeURIComponent(raw);
-      } catch(e) {}
-      raw = raw.replace(/^\//, '');
-
-      // Try LZ-string decompression first (new format, shorter links)
-      try {
-        var json = LZString.decompressFromEncodedURIComponent(raw);
-        if (json) return JSON.parse(json);
-      } catch(e) {}
-
-      // Fallback: old base64 format
-      try {
-        json = decodeURIComponent(escape(atob(raw)));
-        return JSON.parse(json);
-      } catch(e) {
-        return null;
-      }
-    }
-
-    function formatTime(ts) {
-      if (!ts) return '';
-      var d = new Date(ts);
-      var m = d.getMonth() + 1;
-      var day = d.getDate();
-      var h = d.getHours();
-      var min = d.getMinutes();
-      return m + '/' + day + ' ' + (h<10?'0':'')+h + ':' + (min<10?'0':'')+min;
-    }
-
-    function statusClass(s) {
-      if (s === 'done' || s === '已完成') return 'status-done';
-      if (s === 'processing' || s === '处理中') return 'status-processing';
-      if (s === 'accepting' || s === '待验收') return 'status-accepting';
-      return 'status-pending';
-    }
-    function statusLabel(s) {
-      if (s === 'done' || s === '已完成') return '已完成';
-      if (s === 'processing' || s === '处理中') return '处理中';
-      if (s === 'accepting' || s === '待验收') return '待验收';
-      if (s === 'pending' || s === '待指派') return '待指派';
-      return s || '待指派';
-    }
-
-    function render() {
-      var d = getData();
-      var el = document.getElementById('content');
-      if (!d) {
-        el.innerHTML = '<div class="error"><div class="error-icon">&#x1F61E;</div>无法加载工单信息</div>';
-        return;
-      }
-
-      var photosHtml = '';
-      if (d.photos && d.photos.length > 0) {
-        photosHtml = d.photos.map(function(u){
-          return '<img src="'+u+'" class="photo" onerror="this.style.display=\'none\'" loading="lazy">';
-        }).join('');
-      } else {
-        photosHtml = '<div class="no-photo">暂无现场照片</div>';
-      }
-
-      var navHtml = '';
-      if (d.lat && d.lng) {
-        navHtml = '<a href="https://apis.map.qq.com/uri/v1/marker?marker=coord:'+d.lat+','+d.lng+';title='+encodeURIComponent(d.roadName||'')+'&referer=roadmaint" class="nav-btn">导航到该位置</a>';
-      } else {
-        navHtml = '<div class="nav-btn disabled">暂无位置信息</div>';
-      }
-
-      var processedHtml = '';
-      if (d.processRecord && d.processRecord.length > 0) {
-        processedHtml = d.processRecord.map(function(r){
-          var time = r.time ? '<span class="tl-time">'+formatTime(r.time)+'</span>' : '';
-          return '<div class="tl-item"><div class="tl-dot"></div><div class="tl-text">'+(r.text||'')+' '+time+'</div></div>';
-        }).join('');
-      }
-
-      var html = '';
-      html += '<div class="card">';
-      html += '<div class="title-row">';
-      html += '<div class="title">'+(d.categoryName?d.categoryName+' &middot; ':'')+(d.problemType||'工单')+'</div>';
-      html += '<div class="status '+statusClass(d.status)+'">'+statusLabel(d.status)+'</div>';
-      html += '</div>';
-      html += '<div class="info-row"><div class="info-label">路段</div><div class="info-value">'+(d.roadName||'未知')+'</div></div>';
-      if (d.description) {
-        html += '<div class="desc">'+(d.description)+'</div>';
-      }
-      html += '</div>';
-
-      html += '<div class="card">';
-      html += '<div class="info-row"><div class="info-label">等级</div><div class="info-value '+(d.urgentLevel==='紧急'?'urgent':'')+'">'+(d.urgentLevel||'一般')+'</div></div>';
-      if (d.assigneeName) {
-        html += '<div class="info-row"><div class="info-label">负责人</div><div class="info-value">'+(d.assigneeName)+'</div></div>';
-      }
-      if (d.assigneePhone) {
-        html += '<div class="info-row"><div class="info-label">电话</div><div class="info-value"><a href="tel:'+(d.assigneePhone)+'" style="color:#1677FF;text-decoration:none">'+(d.assigneePhone)+'</a></div></div>';
-      }
-      html += '</div>';
-
-      html += '<div class="card">';
-      html += '<div class="section-title">现场照片</div>';
-      html += '<div class="photos">'+photosHtml+'</div>';
-      html += '</div>';
-
-      if (d.lat && d.lng) {
-        html += '<div class="card">';
-        html += '<div class="section-title">位置导航</div>';
-        html += '<div class="info-row"><div class="info-label">地址</div><div class="info-value">'+(d.roadName||'')+'</div></div>';
-        html += navHtml;
-        html += '</div>';
-      } else if (!d.lat && !d.lng) {
-        html += '<div class="card">';
-        html += '<div class="section-title">位置导航</div>';
-        html += navHtml;
-        html += '</div>';
-      }
-
-      if (processedHtml) {
-        html += '<div class="card">';
-        html += '<div class="section-title">处理记录</div>';
-        html += '<div class="timeline">'+processedHtml+'</div>';
-        html += '</div>';
-      }
-
-      html += '<div class="footer">道路养护管理系统 &middot; '+(d.createTime?formatTime(d.createTime):'')+'</div>';
-      el.innerHTML = html;
-    }
-
-    window.onload = render;
-    window.onhashchange = render;
-  </script>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>道路养护工单</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif;background:#f5f7fa;padding:16px;min-height:100vh}
+.card{background:#fff;border-radius:12px;padding:16px;margin-bottom:12px}
+.tr{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;padding-bottom:12px;border-bottom:1px solid #f0f0f0}
+.tt{font-size:18px;font-weight:600;color:#1a1a1a;flex:1;word-break:break-all}
+.st{padding:4px 12px;border-radius:12px;font-size:12px;color:#fff;flex-shrink:0;margin-left:10px}
+.s0{background:#FA8C16}.s1{background:#1677FF}.s2{background:#722ED1}.s3{background:#52C41A}
+.ir{display:flex;margin-bottom:10px;font-size:14px}
+.il{color:#999;width:60px;flex-shrink:0}
+.iv{color:#333;flex:1;word-break:break-all}
+.de{color:#555;font-size:14px;line-height:1.6;margin-top:4px}
+.urg{color:#F5222D;font-weight:600}
+.sec{font-size:14px;font-weight:500;color:#333;margin-bottom:10px;display:flex;align-items:center}
+.sec::before{content:'';width:3px;height:14px;background:#1677FF;border-radius:2px;margin-right:8px;display:inline-block}
+.pgs{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+.pg{width:100%;aspect-ratio:1;object-fit:cover;border-radius:8px;background:#eee}
+.np{grid-column:1/-1;text-align:center;color:#999;padding:30px;font-size:13px}
+.nbs{display:flex;gap:8px}
+.nb{flex:1;display:flex;align-items:center;justify-content:center;padding:12px 8px;border-radius:8px;font-size:13px;font-weight:500;text-decoration:none;color:#fff}
+.nq{background:#12B7F5}.na{background:#07C160}.nb2{background:#3385FF}
+.ti{display:flex;margin-bottom:10px;font-size:13px}
+.td{width:8px;height:8px;border-radius:50%;background:#1677FF;margin:4px 10px 0 0;flex-shrink:0}
+.ttx{color:#666;flex:1}.ttm{color:#aaa;font-size:11px}
+.ft{text-align:center;color:#bbb;font-size:12px;margin:20px 0}
+.ld{text-align:center;color:#999;padding:80px 20px;font-size:14px}
+.er{text-align:center;color:#999;padding:60px 20px}
+</style>
 </head>
 <body>
-  <div id="content"></div>
+<div id="app"><div class="ld">加载中…</div></div>
+<script>
+(function(){
+var el=function(t,c,p){var e=document.createElement(t);if(c)e.className=c;if(p)p.appendChild(e);return e;};
+var esc=function(s){if(!s)return'';return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');};
+var fmt=function(ts){if(!ts)return'';var d=new Date(ts);if(isNaN(d.getTime()))return'';return(d.getMonth()+1)+'/'+d.getDate()+' '+('0'+d.getHours()).slice(-2)+':'+('0'+d.getMinutes()).slice(-2);};
+try{
+var h=location.hash.substring(1);
+if(!h||h.length<10){document.getElementById('app').innerHTML='<div class="er"><div style="font-size:48px;margin-bottom:12px">📋</div><div>无效的链接，请重新分享</div></div>';return;}
+var json=JSON.parse(atob(h));
+var d=json;
+var app=document.getElementById('app');app.innerHTML='';
+
+// Card 1: title + road + desc
+var c1=el('div','card',app);
+var tr=el('div','tr',c1);
+var tt=el('div','tt',tr);
+tt.innerHTML=(d.cn?esc(d.cn)+' &middot; ':'')+esc(d.pt||'问题');
+var sMap={pending:'s0',processing:'s1',accepting:'s2',done:'s3'};
+var sLabel={pending:'待指派',processing:'处理中',accepting:'待验收',done:'已完成'};
+var st=el('div','st '+(sMap[d.st]||'s0'),tr);st.textContent=sLabel[d.st]||'待指派';
+var ir1=el('div','ir',c1);el('div','il',ir1).textContent='路段';el('div','iv',ir1).textContent=d.rn||'未知';
+if(d.de){var de=el('div','de',c1);de.textContent=d.de;}
+
+// Card 2: info
+var c2=el('div','card',app);
+var ir2=el('div','ir',c2);el('div','il',ir2).textContent='等级';
+var iv2=el('div','iv',c2);iv2.textContent=d.ul||'一般';
+if(d.ul==='紧急'||d.ul==='特急')iv2.className='iv urg';
+if(d.an){var ir3=el('div','ir',c2);el('div','il',ir3).textContent='负责人';el('div','iv',ir3).textContent=d.an;}
+if(d.ap){var ir4=el('div','ir',c2);el('div','il',ir4).textContent='电话';var a=el('a','',el('div','iv',ir4));a.href='tel:'+d.ap;a.style.cssText='color:#1677FF;text-decoration:none';a.textContent=d.ap;}
+
+// Card 3: photos
+var c3=el('div','card',app);
+var sec1=el('div','sec',c3);sec1.textContent='现场照片';
+var pgs=el('div','pgs',c3);
+if(d.ph&&d.ph.length>0){d.ph.slice(0,6).forEach(function(u){var img=el('img','pg',pgs);img.src=u;img.onerror=function(){this.style.display='none';};img.loading='lazy';});}
+else{el('div','np',pgs).textContent='暂无现场照片';}
+
+// Card 4: nav
+if(d.la&&d.lo){
+var c4=el('div','card',app);
+el('div','sec',c4).textContent='位置导航';
+var nbs=el('div','nbs',c4);
+var nb1=el('a','nb nq',nbs);nb1.href='https://apis.map.qq.com/uri/v1/marker?marker=coord:'+d.la+','+d.lo+';title='+encodeURIComponent(d.rn||'')+'&referer=roadmaint';nb1.textContent='腾讯地图';
+var nb2=el('a','nb na',nbs);nb2.href='https://uri.amap.com/marker?position='+d.lo+','+d.la+'&name='+encodeURIComponent(d.rn||'');nb2.textContent='高德地图';
+var nb3=el('a','nb nb2',nbs);nb3.href='https://api.map.baidu.com/marker?location='+d.la+','+d.lo+'&title='+encodeURIComponent(d.rn||'')+'&content='+encodeURIComponent(d.rn||'')+'&output=html';nb3.textContent='百度地图';
+}
+
+// Card 5: timeline
+if(d.pr&&d.pr.length>0){
+var c5=el('div','card',app);
+el('div','sec',c5).textContent='处理记录';
+d.pr.forEach(function(r){var ti=el('div','ti',c5);el('div','td',ti);el('div','ttx',ti).innerHTML=esc(r.tx||'')+' <span class="ttm">'+fmt(r.tm)+'</span>';});
+}
+
+// Footer
+el('div','ft',app).textContent='道路养护管理系统 \u00b7 '+fmt(d.ct);
+
+}catch(e){
+document.getElementById('app').innerHTML='<div class="er"><div style="font-size:48px;margin-bottom:12px">📋</div><div>无效的链接或数据已过期</div></div>';
+}
+})();
+</script>
 </body>
 </html>
